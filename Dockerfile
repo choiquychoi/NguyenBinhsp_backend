@@ -1,20 +1,26 @@
+# 1. Sử dụng Node.js bản stable
 FROM node:20-alpine
 
+# 2. Tạo thư mục làm việc
 WORKDIR /app
 
+# 3. Copy package.json để cài thư viện trước (Tối ưu Cache)
 COPY package*.json ./
-
 RUN npm install
 
+# 4. Copy toàn bộ mã nguồn
 COPY . .
 
-RUN npm run build
-
-ENV PORT=5000
-ENV MONGO_URI=mongodb://host.docker.internal:27017/sports_ecommerce
-ENV JWT_SECRET=nguyen_binh_sports_secret_2024_fixed
+# --- CẤU HÌNH BẢO MẬT (CHỈ ĐỂ LẠI PORT) ---
+ENV PORT=5005
+# Các biến nhạy cảm để trống, sẽ điền lúc "Run"
+ENV MONGO_URI=""
+ENV JWT_SECRET=""
+ENV GEMINI_API_KEY=""
 ENV NODE_ENV=production
 
-EXPOSE 5000
+# 5. Thông báo cổng 5005
+EXPOSE 5005
 
+# 6. Chạy ứng dụng bằng tsx
 CMD ["npm", "start"]
