@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
 import { GoogleGenerativeAI } from '@google/generative-ai';
-import News from '../models/News';
-import { protect } from '../middleware/authMiddleware';
+import News from '../models/News.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 

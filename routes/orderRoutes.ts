@@ -1,7 +1,7 @@
 import express, { Request, Response } from 'express';
-import Order from '../models/Order';
-import Product from '../models/Product';
-import { protect } from '../middleware/authMiddleware';
+import Order from '../models/Order.js';
+import Product from '../models/Product.js';
+import { protect } from '../middleware/authMiddleware.js';
 
 const router = express.Router();
 
@@ -24,7 +24,7 @@ router.post('/', async (req: Request, res: Response) => {
       // Nếu có thông tin biến thể cụ thể (Cần xử lý logic này kỹ hơn ở Frontend)
       // Tạm thời trừ vào tổng kho và tìm biến thể tương ứng
       if (product.variants && product.variants.length > 0 && item.variantLabel) {
-        const variant = product.variants.find(v => 
+        const variant = product.variants.find((v: any) => 
           `${v.size || ''}${v.color ? ' - ' + v.color : ''}` === item.variantLabel
         );
         if (variant) {

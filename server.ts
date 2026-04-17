@@ -3,16 +3,17 @@ import dotenv from 'dotenv';
 import cors from 'cors';
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import connectDB from './config/db';
-import Product from './models/Product';
-import Admin from './models/Admin';
-import Contact from './models/Contact';
-import newsRoutes from './routes/newsRoutes';
-import orderRoutes from './routes/orderRoutes';
+import connectDB from './config/db.js';
+import Product from './models/Product.js';
+import Admin from './models/Admin.js';
+import Contact from './models/Contact.js';
+import newsRoutes from './routes/newsRoutes.js';
+import orderRoutes from './routes/orderRoutes.js';
 
-import Order from './models/Order';
-import News from './models/News';
-import { protect } from './middleware/authMiddleware';
+import Order from './models/Order.js';
+import News from './models/News.js';
+import { protect } from './middleware/authMiddleware.js';
+import { generatePresignedUrl } from './config/s3.js';
 
 dotenv.config();
 connectDB();
@@ -40,7 +41,7 @@ app.get('/api/admin/stats', protect, async (req: Request, res: Response) => {
       createdAt: { $gte: sixMonthsAgo }
     });
 
-    const totalRevenue = orders.reduce((acc, order) => acc + order.totalAmount, 0);
+    const totalRevenue = orders.reduce((acc: number, order: any) => acc + order.totalAmount, 0);
 
     // Chuẩn bị dữ liệu doanh thu hàng tháng cho Line Chart
     const monthlyRevenue = [];
@@ -50,8 +51,8 @@ app.get('/api/admin/stats', protect, async (req: Request, res: Response) => {
       const monthLabel = `${d.getMonth() + 1}/${d.getFullYear()}`;
       
       const monthRev = orders
-        .filter(o => o.createdAt.getMonth() === d.getMonth() && o.createdAt.getFullYear() === d.getFullYear())
-        .reduce((acc, o) => acc + o.totalAmount, 0);
+        .filter((o: any) => o.createdAt.getMonth() === d.getMonth() && o.createdAt.getFullYear() === d.getFullYear())
+        .reduce((acc: number, o: any) => acc + o.totalAmount, 0);
       
       monthlyRevenue.push({ name: monthLabel, revenue: monthRev });
     }
@@ -70,7 +71,7 @@ app.get('/api/admin/stats', protect, async (req: Request, res: Response) => {
       .limit(5)
       .select('name soldCount');
 
-    const topSellingData = topProducts.map(p => ({
+    const topSellingData = topProducts.map((p: any) => ({
       name: p.name.length > 15 ? p.name.substring(0, 15) + '...' : p.name,
       sold: p.soldCount
     }));
@@ -93,6 +94,22 @@ app.get('/api/admin/stats', protect, async (req: Request, res: Response) => {
       lowStockProducts,
       recentOrders
     });
+  } catch (error: any) {
+    res.status(500).json({ message: error.message });
+  }
+});
+
+// API lấy Presigned URL để upload ảnh lên S3
+app.post('/api/admin/s3/upload-url', protect, async (req: Request, res: Response) => {
+  const { fileName, fileType } = req.body;
+  
+  if (!fileName || !fileType) {
+    return res.status(400).json({ message: 'Thiếu tên file hoặc loại file.' });
+  }
+
+  try {
+    const result = await generatePresignedUrl(fileName, fileType);
+    res.json(result);
   } catch (error: any) {
     res.status(500).json({ message: error.message });
   }
@@ -148,11 +165,12 @@ app.get('/api/products', async (req: Request, res: Response) => {
   if (req.query.category) query.category = req.query.category;
   if (req.query.brand) query.brand = req.query.brand;
 
-  if (req.query.keyword) {
+  if (req.query.keyword && (req.query.keyword as string).trim().length > 1) {
+    const keyword = (req.query.keyword as string).trim();
     query.$or = [
-      { name: { $regex: req.query.keyword, $options: 'i' } },
-      { brand: { $regex: req.query.keyword, $options: 'i' } },
-      { sku: { $regex: req.query.keyword, $options: 'i' } }
+      { name: { $regex: keyword, $options: 'i' } },
+      { brand: { $regex: keyword, $options: 'i' } },
+      { sku: { $regex: keyword, $options: 'i' } }
     ];
   }
   
