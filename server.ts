@@ -164,6 +164,7 @@ app.get('/api/products', async (req: Request, res: Response) => {
   if (!isAdmin) query.isActive = true;
   if (req.query.category) query.category = req.query.category;
   if (req.query.brand) query.brand = req.query.brand;
+  if (req.query.isFeatured === 'true') query.isFeatured = true; // Lọc sản phẩm nổi bật
 
   if (req.query.keyword && (req.query.keyword as string).trim().length > 1) {
     const keyword = (req.query.keyword as string).trim();
@@ -181,7 +182,9 @@ app.get('/api/products', async (req: Request, res: Response) => {
   }
 
   let sortOption: any = { createdAt: -1 };
-  if (req.query.sort === 'price-asc') sortOption = { price: 1 };
+  // Nếu là lấy sản phẩm nổi bật, ưu tiên sắp xếp theo ngày chọn nổi bật (Mới nhất lên đầu)
+  if (req.query.isFeatured === 'true') sortOption = { featuredAt: -1 }; 
+  else if (req.query.sort === 'price-asc') sortOption = { price: 1 };
   else if (req.query.sort === 'price-desc') sortOption = { price: -1 };
 
   try {
@@ -246,6 +249,10 @@ app.put('/api/admin/products/:id', protect, async (req: Request, res: Response) 
   try {
     const product = await Product.findById(req.params.id);
     if (product) {
+      // Nếu trạng thái isFeatured thay đổi từ false -> true, cập nhật ngày nổi bật
+      if (req.body.isFeatured === true && product.isFeatured === false) {
+        req.body.featuredAt = new Date();
+      }
       Object.assign(product, req.body);
       const updatedProduct = await product.save();
       res.json(updatedProduct);

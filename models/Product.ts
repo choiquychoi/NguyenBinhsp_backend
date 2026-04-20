@@ -6,7 +6,7 @@ export interface IProduct extends Document {
   description: string;
   price: number;
   salePrice?: number;
-  category: 'Cầu lông' | 'Pickleball' | 'Tennis' | 'Dây Đan Vợt' | 'Giày Thể Thao' | 'Phụ Kiện';
+  category: 'Cầu lông' | 'Pickleball' | 'Tennis' | 'Giày Thể Thao' | 'Phụ Kiện';
   brand: string;
   sku: string;
   status: 'Còn hàng' | 'Hết hàng' | 'Ngừng kinh doanh';
@@ -77,7 +77,7 @@ const productSchema: Schema<IProduct> = new Schema(
     description: { type: String, required: true, trim: true },
     price: { type: Number, required: true, min: 0 },
     salePrice: { type: Number, min: 0 },
-    category: { type: String, enum: ['Cầu lông', 'Pickleball', 'Tennis', 'Dây Đan Vợt', 'Giày Thể Thao', 'Phụ Kiện'], required: true },
+    category: { type: String, enum: ['Cầu lông', 'Pickleball', 'Tennis', 'Giày Thể Thao', 'Phụ Kiện'], required: true },
     brand: { type: String, required: true, trim: true },
     sku: { type: String, trim: true, unique: true },
     status: { type: String, default: 'Còn hàng' },
@@ -134,8 +134,9 @@ const productSchema: Schema<IProduct> = new Schema(
     lowStockAlert: { type: Number, default: 10 },
 
     slug: { type: String, unique: true },
-    isFeatured: { type: Boolean, default: false },
-    isFocus: { type: Boolean, default: false },
+  isFeatured: { type: Boolean, default: false },
+  featuredAt: { type: Date },
+  isFocus: { type: Boolean, default: false },
     isActive: { type: Boolean, default: true }
   },
   { timestamps: true }

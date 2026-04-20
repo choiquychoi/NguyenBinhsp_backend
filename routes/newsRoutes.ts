@@ -9,18 +9,19 @@ const router = express.Router();
 router.post('/ai-writer', protect, async (req: Request, res: Response) => {
   const { prompt, type } = req.body;
   
-  if (!process.env.GEMINI_API_KEY) {
-    return res.status(500).json({ message: 'GEMINI_API_KEY is missing in .env' });
+  if (!process.env.GEMINI_API_KEY || process.env.GEMINI_API_KEY === "") {
+    return res.status(400).json({ message: '⚠️ CHƯA CÓ API KEY: Tính năng AI tạm thời chưa thể sử dụng. Vui lòng cập nhật GEMINI_API_KEY mới vào file .env' });
   }
 
   try {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    // Sử dụng model "gemini-1.5-flash" - Model mới và ổn định nhất hiện tại
     const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
 
     const aiPrompt = `
       Bạn là một chuyên gia nội dung về thể thao (cầu lông, pickleball, giày thể thao).
       Hãy viết một nội dung bài viết theo chủ đề: "${prompt}" cho danh mục "${type}".
-      
+
       YÊU CẦU:
       1. Nội dung phải chuyên sâu, chuẩn SEO, giọng văn chuyên nghiệp nhưng gần gũi.
       2. Sử dụng các thẻ HTML như <h2>, <h3>, <p>, <ul>, <li> để trình bày.
@@ -32,8 +33,16 @@ router.post('/ai-writer', protect, async (req: Request, res: Response) => {
     const response = await result.response;
     const text = response.text();
 
+    if (!text) {
+      throw new Error('AI không trả về nội dung. Có thể do nội dung nhạy cảm hoặc vi phạm chính sách.');
+    }
+
     res.json({ content: text });
   } catch (error: any) {
+    // Bắt lỗi cụ thể nếu Google khóa Key
+    if (error.status === 403) {
+      return res.status(403).json({ message: '❌ LỖI BẢO MẬT: API Key của Google đã bị khóa (Leaked). Em hãy lấy Key mới và dán vào .env nhé!' });
+    }
     console.error('LỖI GEMINI AI:', error);
     res.status(500).json({ message: 'Lỗi AI: ' + error.message });
   }
@@ -115,9 +124,9 @@ router.get('/admin/all-posts', protect, async (req: Request, res: Response) => {
 
     res.json({
       posts,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalPosts: total
+      page,
+      pages: Math.ceil(total / limit),
+      total
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
@@ -145,9 +154,9 @@ router.get('/posts', async (req: Request, res: Response) => {
 
     res.json({
       posts,
-      currentPage: page,
-      totalPages: Math.ceil(total / limit),
-      totalPosts: total
+      page,
+      pages: Math.ceil(total / limit),
+      total
     });
   } catch (error: any) {
     res.status(500).json({ message: error.message });
