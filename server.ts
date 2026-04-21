@@ -79,7 +79,7 @@ app.get("/api/products", async (req: Request, res: Response) => {
 
   if (req.query.isFeatured === "true") {
     query.isFeatured = true;
-    sortOption = { featuredAt: 1 }; // Sắp xếp theo thứ tự chọn (Ai chọn trước đứng trước)
+    sortOption = { featuredAt: -1 }; 
   }
 
   if (req.query.keyword) {
