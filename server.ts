@@ -90,7 +90,12 @@ app.get("/api/products", async (req: Request, res: Response) => {
   try {
     const count = await Product.countDocuments(query);
     const products = await Product.find(query).sort(sortOption).limit(pageSize).skip(pageSize * (page - 1));
-    const brands = await Product.distinct("brand", { isActive: true });
+    
+    // Lấy danh sách thương hiệu thực tế có trong danh mục này
+    let brandQuery: any = { isActive: true };
+    if (req.query.category) brandQuery.category = req.query.category;
+    const brands = await Product.distinct("brand", brandQuery);
+    
     res.json({ products, page, pages: Math.ceil(count / pageSize), total: count, brands });
   } catch (error: any) { res.status(500).json({ message: error.message }); }
 });
