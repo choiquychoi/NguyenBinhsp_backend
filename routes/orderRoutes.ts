@@ -75,7 +75,7 @@ router.get('/admin/all', protect, async (req: Request, res: Response) => {
     const page = Number(req.query.page) || 1;
     const limit = Number(req.query.limit) || 10;
     const skip = (page - 1) * limit;
-    const status = req.query.status;
+    const status = req.query.status as string;
 
     const query: any = {};
     if (status && status !== 'All') {
@@ -129,7 +129,7 @@ router.delete('/:id', protect, async (req: Request, res: Response) => {
 // 5. API TRA CỨU ĐƠN HÀNG (CÔNG KHAI)
 router.get('/track/:orderNumber', async (req: Request, res: Response) => {
   try {
-    const { phone } = req.query;
+    const phone = req.query.phone as string;
     if (!phone) {
       return res.status(400).json({ message: 'Vui lòng cung cấp số điện thoại để tra cứu' });
     }

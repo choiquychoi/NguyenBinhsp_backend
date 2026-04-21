@@ -1,5 +1,11 @@
 ﻿import mongoose, { Document, Schema, Model } from "mongoose";
 
+export interface IVariant {
+  size?: string;
+  color?: string;
+  stock: number;
+}
+
 export interface IProduct extends Document {
   name: string;
   description: string;
@@ -17,6 +23,9 @@ export interface IProduct extends Document {
   };
   mainImage: string;
   gallery: string[];
+  variants: IVariant[];
+  totalStock: number;
+  soldCount: number;
   slug: string;
   isFeatured: boolean;
   featuredAt?: Date;
@@ -42,6 +51,15 @@ const productSchema: Schema<IProduct> = new Schema(
     },
     mainImage: { type: String, required: true },
     gallery: [String],
+    variants: [
+      {
+        size: { type: String },
+        color: { type: String },
+        stock: { type: Number, required: true, default: 0 }
+      }
+    ],
+    totalStock: { type: Number, default: 0 },
+    soldCount: { type: Number, default: 0 },
     slug: { type: String, unique: true },
     isFeatured: { type: Boolean, default: false },
     featuredAt: { type: Date },
@@ -55,6 +73,13 @@ productSchema.pre<IProduct>("validate", async function() {
   if (this.isModified("name") && this.name) {
     this.slug = this.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[đĐ]/g, "d").replace(/([^0-9a-z-\s])/g, "").replace(/(\s+)/g, "-").replace(/-+/g, "-").replace(/^-+|-+$/g, "");
   }
+  
+  // Tự động tính tổng tồn kho từ các biến thể
+  if (this.variants && this.variants.length > 0) {
+    this.totalStock = this.variants.reduce((total, v) => total + v.stock, 0);
+    this.status = this.totalStock > 0 ? "Còn hàng" : "Hết hàng";
+  }
+
   if (!this.sku && this.brand && this.category) {
     const brandPrefix = this.brand.substring(0, 3).toUpperCase();
     const categoryPrefix = this.category.substring(0, 2).toUpperCase();

@@ -26,7 +26,7 @@ app.use(express.urlencoded({ limit: "50mb", extended: true }));
 const upload = multer({ storage: multer.memoryStorage() });
 
 // 1. API PROXY UPLOAD
-app.post("/api/admin/s3/upload", protect, upload.single("file"), async (req: Request, res: Response) => {
+app.post("/api/admin/s3/upload", protect, upload.single("file"), async (req: any, res: Response) => {
   if (!req.file) return res.status(400).json({ message: "Không tìm thấy file." });
   try {
     const result = await uploadToS3(req.file.buffer, req.file.originalname, req.file.mimetype);
@@ -50,16 +50,59 @@ app.get("/api/admin/stats", protect, async (req: Request, res: Response) => {
     const totalOrders = await Order.countDocuments();
     const totalProducts = await Product.countDocuments();
     const totalNews = await News.countDocuments();
-    const sixMonthsAgo = new Date();
-    sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 5);
-    const orders = await Order.find({ status: { $ne: "Cancelled" }, createdAt: { $gte: sixMonthsAgo } });
-    const totalRevenue = orders.reduce((acc: number, o: any) => acc + o.totalAmount, 0);
-    const topProducts = await Product.find().limit(5).select("name");
+    
+    // 1. Tính tổng doanh thu (không tính đơn bị hủy)
+    const allActiveOrders = await Order.find({ status: { $ne: "Cancelled" } });
+    const totalRevenue = allActiveOrders.reduce((acc: number, o: any) => acc + (o.totalAmount || 0), 0);
+
+    // 2. Thống kê doanh thu 6 tháng gần nhất
+    const monthlyRevenue = [];
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date();
+      d.setMonth(d.getMonth() - i);
+      const monthName = d.toLocaleString('default', { month: 'short' });
+      const year = d.getFullYear();
+      const month = d.getMonth();
+
+      const startOfMonth = new Date(year, month, 1);
+      const endOfMonth = new Date(year, month + 1, 0, 23, 59, 59);
+
+      const monthOrders = await Order.find({
+        status: { $ne: "Cancelled" },
+        createdAt: { $gte: startOfMonth, $lte: endOfMonth }
+      });
+      const revenue = monthOrders.reduce((acc, o) => acc + (o.totalAmount || 0), 0);
+      monthlyRevenue.push({ name: monthName, revenue });
+    }
+
+    // 3. Thống kê trạng thái đơn hàng
+    const statusStats = [
+      { name: "Chờ duyệt", value: await Order.countDocuments({ status: "Pending" }) },
+      { name: "Đã xác nhận", value: await Order.countDocuments({ status: "Confirmed" }) },
+      { name: "Đang giao", value: await Order.countDocuments({ status: "Shipping" }) },
+      { name: "Đã giao", value: await Order.countDocuments({ status: "Delivered" }) },
+      { name: "Đã hủy", value: await Order.countDocuments({ status: "Cancelled" }) },
+    ];
+
+    // 4. Sản phẩm bán chạy (dựa trên soldCount)
+    const topProducts = await Product.find().sort({ soldCount: -1 }).limit(5);
+    const topSellingData = topProducts.map(p => ({
+      name: p.name,
+      sold: p.soldCount || 0
+    }));
+
+    // 5. Sản phẩm sắp hết hàng (tồn kho < 10)
+    const lowStockProducts = await Product.find({ totalStock: { $lt: 10 } }).limit(5).select("name totalStock");
+
     res.json({
-      totalRevenue, totalOrders, totalProducts, totalNews,
-      monthlyRevenue: [], statusStats: [],
-      topSellingData: topProducts.map(p => ({ name: p.name, sold: 0 })),
-      lowStockProducts: [],
+      totalRevenue,
+      totalOrders,
+      totalProducts,
+      totalNews,
+      monthlyRevenue,
+      statusStats,
+      topSellingData,
+      lowStockProducts: lowStockProducts.map(p => ({ name: p.name, stock: p.totalStock })),
       recentOrders: await Order.find().sort({ createdAt: -1 }).limit(5)
     });
   } catch (error: any) { res.status(500).json({ message: error.message }); }
