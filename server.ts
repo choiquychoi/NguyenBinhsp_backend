@@ -191,7 +191,18 @@ app.post("/api/admin/login", async (req: Request, res: Response) => {
 });
 
 app.get("/api/contact", async (req: Request, res: Response) => {
-  try { res.json(await Contact.findOne() || await Contact.create({ companyName: "NBS" })); }
+  try { 
+    res.json(await Contact.findOne() || await Contact.create({ 
+      companyName: "NGUYÊN BÍNH SPORTS",
+      address: "Số 02 Nguyễn Thế Truyện, P. Tân Sơn Nhì, Q. Tân Phú, TP. HCM",
+      phone: "090 251 39 39",
+      email: "vanphongnguyenbinh@gmail.com",
+      socialLinks: {
+        facebook: "https://www.facebook.com/messages/t/1431186217018284",
+        zalo: "0902513939"
+      }
+    })); 
+  }
   catch (error: any) { res.status(500).json({ message: error.message }); }
 });
 
